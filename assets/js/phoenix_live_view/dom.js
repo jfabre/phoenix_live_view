@@ -85,7 +85,7 @@ let DOM = {
     let url
 
     if(e.defaultPrevented || href === null || this.wantsNewTab(e)){ return false }
-    if(href.startsWith("mailto:") || href.startsWith("tel:")){ return false }
+    if(href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("talespire:")){ return false }
     if(e.target.isContentEditable){ return false }
 
     try {
