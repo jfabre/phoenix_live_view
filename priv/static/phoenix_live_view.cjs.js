@@ -339,7 +339,7 @@ var DOM = {
     if (e.defaultPrevented || href === null || this.wantsNewTab(e)) {
       return false;
     }
-    if (href.startsWith("mailto:") || href.startsWith("tel:")) {
+    if (href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("talespire:")) {
       return false;
     }
     if (e.target.isContentEditable) {
@@ -1227,7 +1227,7 @@ var DOMPostMorphRestorer = class {
   }
 };
 
-// node_modules/morphdom/dist/morphdom-esm.js
+// ../node_modules/morphdom/dist/morphdom-esm.js
 var DOCUMENT_FRAGMENT_NODE = 11;
 function morphAttrs(fromNode, toNode) {
   var toNodeAttrs = toNode.attributes;
@@ -2100,65 +2100,41 @@ var VOID_TAGS = new Set([
   "track",
   "wbr"
 ]);
-var endingTagNameChars = new Set([">", "/", " ", "\n", "	", "\r"]);
 var quoteChars = new Set(["'", '"']);
 var modifyRoot = (html, attrs, clearInnerHTML) => {
   let i = 0;
   let insideComment = false;
   let beforeTag, afterTag, tag, tagNameEndsAt, id, newHTML;
-  while (i < html.length) {
-    let char = html.charAt(i);
-    if (insideComment) {
-      if (char === "-" && html.slice(i, i + 3) === "-->") {
-        insideComment = false;
-        i += 3;
-      } else {
-        i++;
-      }
-    } else if (char === "<" && html.slice(i, i + 4) === "<!--") {
-      insideComment = true;
-      i += 4;
-    } else if (char === "<") {
-      beforeTag = html.slice(0, i);
-      let iAtOpen = i;
+  let lookahead = html.match(/^(\s*(?:<!--.*?-->\s*)*)<([^\s\/>]+)/);
+  if (lookahead === null) {
+    throw new Error(`malformed html ${html}`);
+  }
+  i = lookahead[0].length;
+  beforeTag = lookahead[1];
+  tag = lookahead[2];
+  tagNameEndsAt = i;
+  for (i; i < html.length; i++) {
+    if (html.charAt(i) === ">") {
+      break;
+    }
+    if (html.charAt(i) === "=") {
+      let isId = html.slice(i - 3, i) === " id";
       i++;
-      for (i; i < html.length; i++) {
-        if (endingTagNameChars.has(html.charAt(i))) {
-          break;
-        }
-      }
-      tagNameEndsAt = i;
-      tag = html.slice(iAtOpen + 1, tagNameEndsAt);
-      for (i; i < html.length; i++) {
-        if (html.charAt(i) === ">") {
-          break;
-        }
-        if (html.charAt(i) === "=") {
-          let isId = html.slice(i - 3, i) === " id";
-          i++;
-          let char2 = html.charAt(i);
-          if (quoteChars.has(char2)) {
-            let attrStartsAt = i;
-            i++;
-            for (i; i < html.length; i++) {
-              if (html.charAt(i) === char2) {
-                break;
-              }
-            }
-            if (isId) {
-              id = html.slice(attrStartsAt + 1, i);
-              break;
-            }
+      let char = html.charAt(i);
+      if (quoteChars.has(char)) {
+        let attrStartsAt = i;
+        i++;
+        for (i; i < html.length; i++) {
+          if (html.charAt(i) === char) {
+            break;
           }
         }
+        if (isId) {
+          id = html.slice(attrStartsAt + 1, i);
+          break;
+        }
       }
-      break;
-    } else {
-      i++;
     }
-  }
-  if (!tag) {
-    throw new Error(`malformed html ${html}`);
   }
   let closeAt = html.length - 1;
   insideComment = false;
